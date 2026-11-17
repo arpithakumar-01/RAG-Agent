@@ -60,7 +60,16 @@ The report includes retrieval hit rate, answer accuracy, abstention accuracy, p5
 
 ## Gemini smoke-test result so far
 
-One Gemini `POST /ask` request was tried with the question “What does the security policy say about incident reporting?” The system retrieved passages from `incident_response.md` and `security_policy.md` but abstained. Its trace reported 3.145 seconds latency, two tracked LLM calls, and estimated cost of $0.000238. This is a single smoke test, not an evaluation: accuracy, abstention accuracy, and p50 latency have not been measured. The reported cost is the app's token-price estimate, not a billing statement.
+One Gemini `POST /ask` request was tried with the question “What does the security policy say about incident reporting?” The system retrieved passages from `incident_response.md` and `security_policy.md` but abstained. This is a single smoke test, not an evaluation.
+
+| Metric | Result so far |
+| --- | --- |
+| Answer accuracy | Not measured; the full evaluation has not been run. |
+| Abstention accuracy | Not measured; the full evaluation has not been run. |
+| P50 latency | Not measured from one request. The smoke-test trace reported 3.145 seconds. |
+| Cost per request | $0.000238 estimated for that one request; this is not representative and is not a billing statement. |
+
+Run the evaluation above with Gemini enabled to replace these “not measured” values with benchmark results.
 
 ## Mock mode vs. Gemini mode
 
