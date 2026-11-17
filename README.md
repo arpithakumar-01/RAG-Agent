@@ -58,12 +58,6 @@ built it and the app refuses to mix them).
 spans. Each request is appended to `traces/traces.jsonl`. Prices are configurable estimates
 (`PRICE_IN_PER_M`, `PRICE_OUT_PER_M`); check current Gemini pricing.
 
-## Deploy to Cloud Run (not yet tested by the author, verify before relying on it)
-
-```bash
-gcloud run deploy enterprise-rag --source . --region asia-south1 \
-  --set-secrets GEMINI_API_KEY=gemini-api-key:latest --allow-unauthenticated=false
-```
 
 ## Ideas to extend
 
