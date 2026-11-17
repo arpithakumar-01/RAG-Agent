@@ -1,0 +1,21 @@
+[
+  {"q": "How long must a password be?", "source": "security_policy.md", "answer_contains": ["14"]},
+  {"q": "How quickly do I need to report a phishing email?", "source": "security_policy.md", "answer_contains": ["1 hour"]},
+  {"q": "Who has to approve access to production systems?", "source": "security_policy.md", "answer_contains": ["manager", "security"]},
+  {"q": "How fast must on-call acknowledge a SEV1 incident?", "source": "incident_response.md", "answer_contains": ["15 minutes"]},
+  {"q": "When is the postmortem due after a major incident?", "source": "incident_response.md", "answer_contains": ["5 business days"]},
+  {"q": "How many days of annual leave do employees get?", "source": "leave_policy.md", "answer_contains": ["24"]},
+  {"q": "How many leave days can I carry over?", "source": "leave_policy.md", "answer_contains": ["5"]},
+  {"q": "How many weeks of parental leave do primary caregivers get?", "source": "leave_policy.md", "answer_contains": ["26"]},
+  {"q": "How many approvals does an infrastructure pull request need?", "source": "engineering_standards.md", "answer_contains": ["2"]},
+  {"q": "What is the minimum unit test coverage?", "source": "engineering_standards.md", "answer_contains": ["80"]},
+  {"q": "When is the Friday deploy freeze?", "source": "engineering_standards.md", "answer_contains": ["3:00"]},
+  {"q": "How often must secrets be rotated?", "source": "engineering_standards.md", "answer_contains": ["90 days"]},
+  {"q": "What must be completed in the first two weeks?", "source": "onboarding.md", "answer_contains": ["security"]},
+  {"q": "What is the deadline to submit an expense claim?", "source": "expenses.md", "answer_contains": ["30 days"]},
+  {"q": "Who approves expense claims above 25,000 rupees?", "source": "expenses.md", "answer_contains": ["director"]},
+  {"q": "How long is the SEV1 status page update interval and how many days of sick leave are there?", "source": "incident_response.md", "also_source": "leave_policy.md", "answer_contains": ["30 minutes", "10"]},
+  {"q": "What is the CEO's favourite colour?", "expect_abstain": true},
+  {"q": "What is the stock price of Northwind Labs today?", "expect_abstain": true},
+  {"q": "Which programming language was invented by Guido van Rossum?", "expect_abstain": true}
+]
