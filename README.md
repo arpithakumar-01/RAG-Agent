@@ -1,90 +1,51 @@
 # Enterprise RAG Agents
 
-A multi-agent Retrieval-Augmented Generation (RAG) assistant that answers questions over company documents with citations, self-verification, and per-request tracing. It uses Gemini for generation and embeddings when a Gemini API key is configured; without a key it runs offline in mock mode.
+A multi-agent Retrieval-Augmented Generation (RAG) assistant that answers questions over internal
+company documents with **citations**, **self-verification**, and **per-request tracing** of tokens,
+latency and cost. Built on the Gemini API and designed to deploy on Google Cloud (Cloud Run).
 
-The sample corpus contains a fictional company handbook covering security, incident response, leave, engineering standards, onboarding, and expenses.
+The bundled sample corpus is a fictional company handbook (security, incident response, leave,
+engineering standards, onboarding, expenses) in `data/docs/`. Replace it with your own `.md`/`.txt` files.
 
-## How it works
+## Architecture
 
-1. **Ingest** splits Markdown and text documents into overlapping chunks, embeds them, and saves a local vector index.
-2. **Plan** turns the question into up to three search queries.
-3. **Retrieve** combines semantic vector search with BM25 keyword ranking and returns the best passages.
-4. **Answer** uses only those passages, cites claims, and abstains if the evidence is insufficient.
-5. **Check** reviews a drafted answer for support and can request one revision.
+```
+question
+   │
+   ▼
+Planner agent ──► splits multi-part questions into ≤3 sub-queries (JSON)
+   │
+   ▼
+Retriever agent (ReAct-style) ──► hybrid search: dense embeddings + BM25, fused with RRF
+   │   Thought: is the best match weak?  Action: rewrite query  Observation: re-search
+   ▼
+Answerer agent ──► answers ONLY from numbered passages, cites [n], abstains if unsupported
+   │
+   ▼
+Critic agent (self-reflection) ──► checks every claim against its cited passage;
+   │       if unsupported, feedback goes back to the Answerer (max MAX_REVISIONS loops)
+   ▼
+answer + citations + verified flag + trace (tokens in/out, tokens/sec, est. cost, per-span latency)
+```
 
-## Run in GitHub Codespaces
+Key files: `app/ingest.py` (chunking + indexing), `app/vectorstore.py` (hybrid retrieval),
+`app/agents.py` (the four agents), `app/pipeline.py` (orchestration), `app/tracing.py` (LLM metrics),
+`app/api.py` (FastAPI REST), `eval/run_eval.py` (evaluation harness).
 
-The repository currently stores Python modules and sample Markdown files at the repository root, while the code imports them as the `app` package and expects documents under `data/docs`. In a Codespace terminal at the repository root, create the expected runtime layout:
+## Quick start
 
 ```bash
-python -m pip install -r requirements.txt
-mkdir -p app data/docs
-cp ./*.py app/
-cp eval_set.json app/
-cp security_policy.md incident_response.md leave_policy.md engineering_standards.md onboarding.md expenses.md data/docs/
+pip install -r requirements.txt
+export GEMINI_API_KEY=your_key        # without a key the app runs in offline MOCK mode
+python -m app.cli ingest              # build the vector index from data/docs
+python -m app.cli ask "How long must a password be?"
+uvicorn app.api:app --reload          # POST /ask {"question": "..."}  |  GET /health
+python -m eval.run_eval               # evaluation report
+pytest -q                             # tests
 ```
+## Ideas to extend
 
-For Gemini mode, add a GitHub Codespaces secret named `GEMINI_API_KEY` with access to this repository, then restart the Codespace. Do not paste the key into the repository or a chat message.
-
-Build the document index:
-
-```bash
-python -m app.cli ingest
-```
-
-The default model in this repository may be unavailable to new Gemini API projects. Start the API with a model available to your Gemini project. For example, to use Gemini 3.5 Flash-Lite:
-
-```bash
-LLM_MODEL=gemini-3.5-flash-lite python -m uvicorn app.api:app --host 0.0.0.0 --port 8000
-```
-
-In Codespaces, open the forwarded port 8000. Use `/health` to see the active mode and model, and `/docs` to try the API. Expand **POST /ask**, choose **Try it out**, enter a JSON request such as:
-
-```json
-{
-  "question": "According to the security policy, how soon must suspected phishing emails be reported?"
-}
-```
-
-Select **Execute** to see the answer, citations, and trace. This repository provides an API, not a chat-style web interface. Codespaces and Gemini free-tier usage have account quotas and rate limits. Do not link billing if you require no-charge usage; requests may stop when free limits are reached.
-
-## Run the evaluation
-
-After the Codespaces layout above is created, run the evaluation with the Gemini key available in the Codespace:
-
-```bash
-LLM_MODEL=gemini-3.5-flash-lite python -m app.run_eval --json
-```
-
-The report includes retrieval hit rate, answer accuracy, abstention accuracy, p50 and p95 latency, and estimated total cost. The evaluation uses the model/API configuration active in that Codespace.
-
-## Gemini smoke-test result so far
-
-One Gemini `POST /ask` request was tried with the question “What does the security policy say about incident reporting?” The system retrieved passages from `incident_response.md` and `security_policy.md` but abstained. This is a single smoke test, not an evaluation.
-
-| Metric | Result so far |
-| --- | --- |
-| Answer accuracy | Not measured; the full evaluation has not been run. |
-| Abstention accuracy | Not measured; the full evaluation has not been run. |
-| P50 latency | Not measured from one request. The smoke-test trace reported 3.145 seconds. |
-| Cost per request | $0.000238 estimated for that one request; this is not representative and is not a billing statement. |
-
-Run the evaluation above with Gemini enabled to replace these “not measured” values with benchmark results.
-
-## Mock mode vs. Gemini mode
-
-Without `GEMINI_API_KEY` (or with `USE_MOCK=1`), the app uses a deterministic hashing embedder and a rule-based extractive LLM. Mock mode is useful for checking that the pipeline runs, but it does not measure Gemini answer quality.
-
-If you change embedding models, rebuild the index with `python -m app.cli ingest`. The saved index records its embedder and the app rejects a mismatch.
-
-## Configuration
-
-The app reads configuration from environment variables:
-
-- `GEMINI_API_KEY` or `GOOGLE_API_KEY`: Gemini API key.
-- `LLM_MODEL`: generation model (default: `gemini-2.5-flash`).
-- `EMBED_MODEL`: embedding model (default: `gemini-embedding-001`).
-- `DOCS_DIR`, `INDEX_DIR`, `TRACE_DIR`: documents, index, and trace locations.
-- `TOP_K`, `MAX_REVISIONS`: retrieval count and answer-revision limit.
-
-Per-request traces are appended to `traces/traces.jsonl`. The `est_cost_usd` trace field is an estimate based on configurable token prices; check the Gemini pricing page and your AI Studio usage for actual billing and free-tier status.
+- Swap the plain-Python orchestration for Google ADK or LangGraph (agents already have clean interfaces).
+- Replace the in-memory store with Vertex AI Vector Search, AlloyDB or ChromaDB.
+- Add document-level access control and PII redaction before indexing.
+- Grow `eval/eval_set.json` and add LLM-as-judge faithfulness scoring.
